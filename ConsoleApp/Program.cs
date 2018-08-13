@@ -12,67 +12,95 @@ namespace ConsoleApp
     {
         static void Main(string[] args)
         {
-            //"640x260", 
-            Dashit(@"C:\DATA\MEDIA\Ozzy\Ozzy.mp4", new List<string> { "160x90", null }, 250);
+            RegURI.RegisterUriScheme();
+            string path = @"C:\DATA\MEDIA\";
+
+            if (args != null && args.Count() > 0)
+            {
+                foreach (var arg in args)
+                {
+                    Console.WriteLine("Argument: " + arg);
+                    var skey = arg.Remove(arg.Length - 1).Replace(RegURI.UriScheme + "://", "");
+                    var directory_name = Encoding.UTF8.GetString(Convert.FromBase64String(System.Web.HttpUtility.UrlDecode(skey)));
+                    Console.WriteLine("Directory Name: " + directory_name);
+
+                    var srcdir = Path.Combine(path, directory_name);
+                    var files = Directory.GetFiles(srcdir, "*.*").Where(x => x.EndsWith(".mkv") || x.EndsWith(".avi") || x.EndsWith(".mp4")).ToList();
+                    files.ForEach(x =>
+                    {
+                        Console.WriteLine(x);
+                        Dashify(x, new List<string> { "1920x1080:0", "1280x720:17", "640x40:24" });
+                    });
+                }
+            }
+
             Console.WriteLine("Finished ...");
             Console.ReadLine();
         }
 
-
-        public static async void Dashit(string input, List<string> resolutions, int bitrate)
+        public static void PrepareDirectory()
         {
-            //ffmpeg -codec:a libvo_aacenc -ar 44100 -ac 1 -codec:v libx264 -profile:v baseline -level 13 -b:v 2000k output.mp4 -i test.mp4
-            //ffmpeg - i input.avi - s 160x90 - c:v libx264 -b:v 250k - g 90 - an input_video_160x90_250k.mp4
-            //ffmpeg -i input.avi -c:a aac -b:a 128k -vn input_audio_128k.mp4
-            //C:\DATA\Production\MediaLan\ffmpeg\bin>ffmpeg -codec:a aac -ar 44100 -ac 1 -codec:v libx264 -profile:v baseline -level 13 -b:v 2000k output.mp4 -i "C:\DATA\MEDIA\Isle Of Dogs (2018) [WEBRip] [1080p] [YTS.AM]\Isle.Of.Dogs.2018.1080p.WEBRip.x264-[YTS.AM].mp4"
+            //1. Rename top level to [TITLE], [YEAR]
+            //2. If TV Series, create structure: [Season x]\[S01E01]
+            //3. Rename files without any tags etc. and cleanup spaces etc.
 
-            //MP4Box -dash 10000 -dash-profile live -segment-name output-seg "C:\DATA\Production\MediaLan\ffmpeg\bin\output.mp4"
+        }
 
+        public static void Dashify(string input, List<string> resolutions)
+        {
             var ext = input.Substring(input.LastIndexOf("."));
             var outputname = input.Remove(input.LastIndexOf("."));
             outputname = outputname.Substring(outputname.LastIndexOf("\\"));
             var outputpath = input.Remove(input.LastIndexOf("\\")) + "\\STREAM";
             if (Directory.Exists(outputpath) == false) Directory.CreateDirectory(outputpath);
 
-
-            int keyframe = 90;
-            Dictionary<Process, string> p1 = new Dictionary<Process, string>();
             Process p2 = null;
 
             //EXTRACT AUDIO
-            var abitrate = 192;
-            var afname = outputname + "_audio_" + abitrate + "k" + ".mp4";
+            var abitrate = 125;
+            var afname = outputname + "_audio" + ".mp4"; //" + abitrate + "k
             if (!File.Exists(outputpath + "\\" + afname))
             {
                 var audio = new ProcessStartInfo()
                 {
+                    //
                     FileName = @"C:\DATA\Production\MediaLan\ffmpeg\bin\ffmpeg",
-                    Arguments = "-y -i \"" + input + "\" -vn -b:a " + abitrate + "k \"" + outputpath + "\\" + afname + "\"",
-                    WorkingDirectory = outputpath,
-                    RedirectStandardOutput = true,
-                    RedirectStandardInput = true,
-                    UseShellExecute = false
+                    Arguments = "-n -i \"" + input + "\" -b:a " + abitrate + "k -vn \"" + outputpath + "\\" + afname + "\"",
+                    WorkingDirectory = outputpath
                 };
                 p2 = Process.Start(audio);
             }
 
-            int indx = 0;
-            foreach (var resolution in resolutions)
+            //ENCODE VIDEO FOR EACH RESOLUTION
+            int keyframe = 90;
+            var existingfiles = new List<string>();
+            Dictionary<Process, string> p1 = new Dictionary<Process, string>();
+            foreach (var spec in resolutions)
             {
-                indx++;
-                var vfname = outputname + "_video_" + (resolution != null ? resolution + "_" : "") + bitrate + "k" + ".mp4";
+                var tmp = spec.Split(':');
+                var resolution = tmp[0];
+                var crf = tmp[1];
+                
+                var vfname = outputname + "_video_" + (resolution != null ? resolution + "_" : "") + crf + ".mp4";
                 if (!File.Exists(outputpath + "\\" + vfname))
                 {
-                    var video = new ProcessStartInfo()
+                    //var rfilename = "\"" + outputpath + "\\" + outputname + "_video_{0}" + ".mp4" + "\"";
+                    //var args = "-i \"" + input + "\" -filter_complex '[0:v]yadif,split=3[out1][out2][out3]' \\ -map '[out1]' -s 1280x720 -an " + String.Format(rfilename,"HD") + " \\ -map '[out2]' -s 640x480 -an " + String.Format(rfilename, "SD") + " \\ -map '[out3]' -s 320x240 -an " + String.Format(rfilename, "VGA");
+                     var video = new ProcessStartInfo()
                     {
                         FileName = @"C:\DATA\Production\MediaLan\ffmpeg\bin\ffmpeg",
-                        Arguments = "-n -i \"" + input + "\" -b:v " + bitrate*indx + "k -g " + keyframe + " -an \"" + outputpath + "\\" + vfname + "\"" + (resolution != null ? " -s " + resolution : ""),
-                        WorkingDirectory = outputpath,
-                        RedirectStandardOutput = true,
-                        RedirectStandardInput = true,
-                        UseShellExecute = false
+                         //Arguments = args, //-profile:v baseline 
+                         //Arguments = "-i \"" + input + "\" -g " + keyframe + " -pix_fmt yuv420p -c:v libvpx-vp9 -an -crf " + crf + " \"" + outputpath + "\\" + vfname + "\" -vf scale=-2:1080,setsar=1", // + (resolution != null ? " -s " + resolution : ""),
+                         Arguments = "-i \"" + input + "\" -movflags +faststart -an \"" + outputpath + "\\" + vfname + "\" -crf " + crf, // + (resolution != null ? " -s " + resolution : ""),
+                         WorkingDirectory = outputpath,
+                        //UseShellExecute = false,
+                        //RedirectStandardOutput = true,
                     };
-                    p1.Add(Process.Start(video), afname);
+                    p1.Add(Process.Start(video), vfname);
+                }
+                else
+                {
+                    existingfiles.Add(vfname);
                 }
 
                 while (p1.Count(x => !x.Key.HasExited) + (p2 != null && !p2.HasExited ? 1 : 0) > 1) {
@@ -82,24 +110,27 @@ namespace ConsoleApp
 
             while (p1.Any(x => !x.Key.HasExited) || p2 != null && !p2.HasExited)
             {
-                System.Threading.Thread.Sleep(1000);
+                System.Threading.Thread.Sleep(500);
             }
 
-            mp4boxit(p1, afname, outputpath, keyframe);
+            mp4boxit(p1, existingfiles, afname, outputpath, keyframe);
         }
 
-        public static void mp4boxit(Dictionary<Process, string> videos, string audio, string outputpath, int keyframe)
+        public static void mp4boxit(Dictionary<Process, string> videos, List<string> existingfiles, string audio, string outputpath, int keyframe)
         {
-            //MP4Box -dash 10000 -dash-profile live -segment-name output-seg "C:\DATA\Production\MediaLan\ffmpeg\bin\output.mp4"
-            var args = "-dash 10000 -profile dashavc264:live -out manifest.mpd";
+            var args = "-dash 5000 -rap -frag-rap -profile live -bs-switching no -out manifest.mpd";
             videos.ToList().ForEach(x =>
             {
-                args += " \"" + x.Value + "\"";
+                args += " \"" + outputpath + x.Value + "\"";
+            });
+            existingfiles.ForEach(x =>
+            {
+                args += " \"" + outputpath + x + "\"";
             });
             var dash = new ProcessStartInfo()
             {
                 FileName = @"C:\Program Files\GPAC\MP4Box.exe",
-                Arguments = args + " \"" + audio + "\"",
+                Arguments = args + " \"" + outputpath + audio + "\"",
                 WorkingDirectory = outputpath,
                 RedirectStandardOutput = true,
                 RedirectStandardInput = true,
@@ -107,7 +138,7 @@ namespace ConsoleApp
             };
 
             var p1 = Process.Start(dash);
-            while (!p1.HasExited) { System.Threading.Thread.Sleep(1000); }
+            while (!p1.HasExited) { System.Threading.Thread.Sleep(500); }
         }
     }
 }

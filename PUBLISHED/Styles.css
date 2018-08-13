@@ -1,0 +1,40 @@
+﻿body {
+    background: #000000;
+}
+
+ul li {
+    display: inline-block;
+    float: left;
+    width: 25%;
+    min-width: 250px;
+    vertical-align: top;
+    border: 1px solid #000;
+    margin: 5px;
+    padding: 5px;
+    background: #fff;
+}
+
+    ul li img {
+        max-height: 175px;
+        clear: both;
+    }
+
+    ul li:hover {
+        border: 1px solid #f00;
+        cursor: pointer;
+        background: #efefef;
+    }
+
+video {
+    width: 100%;
+    max-width: 1280px;
+}
+
+.notice {
+    background: white;
+}
+
+.container {
+    margin: 0 auto 0 auto;
+    width: 80%;
+}

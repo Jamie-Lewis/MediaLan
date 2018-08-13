@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Web;
 using System.Web.Security;
@@ -9,17 +10,10 @@ namespace MediaLan
 {
     public class Global : System.Web.HttpApplication
     {
-
         protected void Application_Start(object sender, EventArgs e)
         {
             // Code that runs on application startup 
-            RegisterRoute(System.Web.Routing.RouteTable.Routes);
-        }
-
-        void RegisterRoute(System.Web.Routing.RouteCollection routes)
-        {
-            routes.RouteExistingFiles = true;
-            routes.MapPageRoute("Stream", "STREAMING/{path*}", "~/Streaming.aspx");
+            System.Web.Routing.RouteTable.Routes.StartMediaLan();
         }
 
         protected void Session_Start(object sender, EventArgs e)
