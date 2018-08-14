@@ -12,6 +12,9 @@ namespace ConsoleApp
     {
         static void Main(string[] args)
         {
+            using (Process p = Process.GetCurrentProcess())
+                p.PriorityClass = ProcessPriorityClass.High;
+
             RegURI.RegisterUriScheme();
             string path = @"C:\DATA\MEDIA\";
 

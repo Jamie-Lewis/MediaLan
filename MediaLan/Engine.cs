@@ -15,9 +15,11 @@ namespace MediaLan
         {
             Engine.Startup();
             routes.RouteExistingFiles = true;
-            routes.MapPageRoute("Library", "Library", "~/Default.aspx");
+            routes.MapPageRoute("Library", "Library", "~/Library.aspx");
             routes.MapPageRoute("Player", "Library/{directory}", "~/Player.aspx");
             routes.MapPageRoute("Mgr", "Manage", "~/Manage.aspx");
+            routes.MapPageRoute("Root", "", "~/Login.aspx");
+            routes.MapPageRoute("Logon", "Logon", "~/Login.aspx");
         }
     }
 

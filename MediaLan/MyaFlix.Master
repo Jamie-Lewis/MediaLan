@@ -1,0 +1,23 @@
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="MyaFlix.master.cs" Inherits="MediaLan.MyaFlix" %>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <title>MediaLan</title>
+    <link href="Styles.css" rel="stylesheet" />
+    <asp:ContentPlaceHolder ID="head" runat="server"></asp:ContentPlaceHolder>
+</head>
+<body>
+    <asp:Label ID="Welcome" runat="server" />
+  <form id="form1" runat="server">
+           <div class="container">
+            <div id="header">
+                <div id="menu"><asp:ContentPlaceHolder ID="ContentHeader" runat="server"></asp:ContentPlaceHolder></div>
+                <img id="logo" src="/logo.png" />
+            </div>
+               
+            <asp:ContentPlaceHolder ID="ContentPlaceHolder1" runat="server">
+            </asp:ContentPlaceHolder>
+        </div>
+    </form>
+</body>
+</html>
